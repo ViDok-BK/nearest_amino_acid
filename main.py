@@ -1,53 +1,57 @@
-from biopandas.pdb import PandasPdb as pdpdb
-import numpy as np
-import pandas as pd
-from util_functions import extract_pdb 
-from util_functions import extract_from_threshold
-from sklearn.neighbors import KNeighborsClassifier as knn
-import matplotlib.pyplot as plt
+from flows.candidate_link import find_candidate_amino_atom
+from flows.post_process import build_la_ra_mapping_by_idx
+from flows.utils import save_results
+from objects.data_builder import DataBuilder
+from models.configs import model_configs
+from models import create_model
+from utils import *
+import configs
 import time
+import sys
 
+@record_timestamp
+def main(FLAGS=None):
+    if FLAGS is None:
+        FLAGS, _ = configs.parser.parse_known_args(args=sys.argv[1:])
 
-#Define some hyper-parameters
-virus_path = "C:\\Users\\Admin\\OneDrive\\Desktop\\Github\\Vidok\\Receptor_vidok.pdb"
-lig_path = "C:\\Users\\Admin\\OneDrive\\Desktop\\Github\\Vidok\\6lu7_Ligand.pdb"
-threshold = 4.0
-k_neighbors = 20
-amino_group = []
+    # Build data
+    print("BUILDING DATA...")
+    DataBuilder().init(configs.data_path)
+    list_receptors, list_ligands = DataBuilder().get_atom_data()
+    receptor_coords, ligand_coords = DataBuilder().get_atom_data(only_coords=True)
+
+    # Initialize models
+    print("CREATING MODELS...")
+    model = create_model(FLAGS.model, **model_configs[FLAGS.model])
+
+    # Run program
+    # start_time = time.time()
+    print("RUNNING ALGORITHM...")
+    nearest_amino_atom_idx = find_candidate_amino_atom(receptor_coords, ligand_coords, model)
+
+    # Post-process result
+    print("POST-PROCESSING RESULTS...")
+    la_ra_mapping = build_la_ra_mapping_by_idx(list_receptors, list_ligands, nearest_amino_atom_idx)
+    # print(time.time() - start_time)
+
+    # Save result
+    print("SAVING RESULTS...")
+    save_results("nearest_atoms", receptor_atoms=list_receptors,
+                                  ligand_atoms=list_ligands,
+                                  lr_mapping=la_ra_mapping)
+
+    # Visualize result
+    count_ratoms_per_latom = []
+    for ligand_idx, per_ligand in enumerate(la_ra_mapping):
+        for receptor_idx, per_receptor in enumerate(per_ligand):
+            for la_idx, latom in enumerate(per_receptor):
+                count_ratoms_per_latom.append(len(latom))
+
+    print("Average: %.02f" % (sum(count_ratoms_per_latom)/len(count_ratoms_per_latom)))
+    print("Total: %d" % sum(count_ratoms_per_latom))
+
+    print("DONE!")
 
 if __name__ == '__main__':
-    begin = time.time()
-    virus_init_frame = pdpdb().read_pdb(virus_path)
-    lig_init_frame = pdpdb().read_pdb(lig_path)
-    x_train, y_train, x_test, y_test, train_info, test_info = extract_pdb(virus_init_frame, lig_init_frame)
-   
-    #Define KNN algorithm.
-    model = knn(n_neighbors= k_neighbors, algorithm = 'kd_tree', metric = "euclidean")
-    model.fit(x_train, y_train)
-    neighs = model.kneighbors(x_test, return_distance = True)
-    amino_group = []
-    for i in range(len(x_test)):
-
-    #Extract distances and indices respect to the threshold
-        matrix_distance_dest, matrix_indices_dest = extract_from_threshold(neighs[0][i], neighs[1][i], 8.0)
-        tmp = [train_info[x] for x in matrix_indices_dest]
-        amino_group.extend(tmp)
-
-    headings = ['atom_name', 'residue_name', 'chain_id', 'residue_number']
-    _result = pd.DataFrame(amino_group, columns=headings).to_csv("result.csv")
-
-    #Read the csv to write out the final result, including the amino acid's name and its number
-    #Ex: GLU166, PHE170, etc.
-    """
-    path = 
-
-    df = pd.read_csv(path)
-
-    frame = df.groupby(["residue_name", "residue_number"])
-    with open("result.txt", 'w') as f:
-        for item in frame:
-            f.write(item[0][0] + "")
-            f.write(str(item[0][1])+ '\n')
-    end = time.time()
-    print(end-begin)  
-    """
+    _, runtime = main()
+    print("Total runtine: %.03f" % runtime)

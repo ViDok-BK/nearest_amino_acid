@@ -1,2 +1,1 @@
-# nearest_amino_axit
-
+# Nearest Amino Acid

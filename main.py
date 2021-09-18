@@ -9,14 +9,15 @@ import time
 
 
 #Define some hyper-parameters
-virus_path = "C:\\Users\\Admin\\OneDrive\\Desktop\\Github\\Vidok\\Receptor_vidok.pdb"
-lig_path = "C:\\Users\\Admin\\OneDrive\\Desktop\\Github\\Vidok\\6lu7_Ligand.pdb"
+virus_path = "/home/nhqcs/Desktop/Github/nearest_amino_axit/Receptor_vidok.pdb"
+lig_path = "/home/nhqcs/Desktop/Github/nearest_amino_axit/6lu7_Ligand.pdb"
 threshold = 4.0
 k_neighbors = 20
 amino_group = []
 
 if __name__ == '__main__':
-    begin = time.time()
+    begin = time.perf_counter()
+
     virus_init_frame = pdpdb().read_pdb(virus_path)
     lig_init_frame = pdpdb().read_pdb(lig_path)
     x_train, y_train, x_test, y_test, train_info, test_info = extract_pdb(virus_init_frame, lig_init_frame)
@@ -38,16 +39,6 @@ if __name__ == '__main__':
 
     #Read the csv to write out the final result, including the amino acid's name and its number
     #Ex: GLU166, PHE170, etc.
-    """
-    path = 
+    end = time.perf_counter()
 
-    df = pd.read_csv(path)
-
-    frame = df.groupby(["residue_name", "residue_number"])
-    with open("result.txt", 'w') as f:
-        for item in frame:
-            f.write(item[0][0] + "")
-            f.write(str(item[0][1])+ '\n')
-    end = time.time()
-    print(end-begin)  
-    """
+    print("Elapsed time: "+ str(end-begin))

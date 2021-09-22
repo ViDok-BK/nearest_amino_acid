@@ -8,7 +8,8 @@ class Ligand():
         self.ligand_df = PandasPdb().read_pdb(self.pdb_file)
 
         self.ligand_atoms = pd.concat([self.ligand_df.df["ATOM"], self.ligand_df.df["HETATM"]])
-
+        self.ligand_atoms.reset_index(inplace=True, drop=True)
+        
     def get_coords(self):
         coords = self.ligand_atoms[["x_coord", "y_coord", "z_coord"]]
         return coords

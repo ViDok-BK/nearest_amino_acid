@@ -7,3 +7,4 @@ def create_model(model_name, *args, **kwargs):
         model = NearestNeighbors(*args, **kwargs)
 
     return model
+    

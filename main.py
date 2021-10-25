@@ -1,5 +1,5 @@
 from flows.candidate_link import find_candidate_amino_atom
-from flows.post_process import build_la_ra_mapping_by_idx
+from flows.post_process import build_la_ra_mapping_by_idx, filter_by_chemical_properties
 from flows.utils import save_results
 from objects.data_builder import DataBuilder
 from models.configs import model_configs
@@ -27,11 +27,12 @@ def main(FLAGS=None):
     # Run program
     # start_time = time.time()
     print("RUNNING ALGORITHM...")
-    nearest_amino_atom_idx = find_candidate_amino_atom(receptor_coords, ligand_coords, model)
+    nearest_amino_atom_idx, list_distances = find_candidate_amino_atom(receptor_coords, ligand_coords, model)
 
     # Post-process result
     print("POST-PROCESSING RESULTS...")
     la_ra_mapping = build_la_ra_mapping_by_idx(list_receptors, list_ligands, nearest_amino_atom_idx)
+    hydrogen_bonds = filter_by_chemical_properties(list_receptors, list_ligands, nearest_amino_atom_idx, list_distances)
     # print(time.time() - start_time)
 
     # Save result
@@ -40,15 +41,19 @@ def main(FLAGS=None):
                                   ligand_atoms=list_ligands,
                                   lr_mapping=la_ra_mapping)
 
-    # Visualize result
-    count_ratoms_per_latom = []
-    for ligand_idx, per_ligand in enumerate(la_ra_mapping):
-        for receptor_idx, per_receptor in enumerate(per_ligand):
-            for la_idx, latom in enumerate(per_receptor):
-                count_ratoms_per_latom.append(len(latom))
+    save_results("hydrogen_bonds", receptor_atoms=list_receptors,
+                                   ligand_atoms=list_ligands,
+                                   hydrogen_bonds=hydrogen_bonds)
 
-    print("Average: %.02f" % (sum(count_ratoms_per_latom)/len(count_ratoms_per_latom)))
-    print("Total: %d" % sum(count_ratoms_per_latom))
+    # Visualize result
+    # count_ratoms_per_latom = []
+    # for ligand_idx, per_ligand in enumerate(la_ra_mapping):
+    #     for receptor_idx, per_receptor in enumerate(per_ligand):
+    #         for la_idx, latom in enumerate(per_receptor):
+    #             count_ratoms_per_latom.append(len(latom))
+
+    # print("Average: %.02f" % (sum(count_ratoms_per_latom)/len(count_ratoms_per_latom)))
+    # print("Total: %d" % sum(count_ratoms_per_latom))
 
     print("DONE!")
 
